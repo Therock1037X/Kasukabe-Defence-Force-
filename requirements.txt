@@ -1,0 +1,13 @@
+
+osmnx
+geopandas
+pyogrio
+shapely
+pandas
+numpy
+pyarrow
+requests
+scikit-learn
+joblib
+fastapi
+uvicorn[standard]
