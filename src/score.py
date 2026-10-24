@@ -35,11 +35,12 @@ from config import DATA_DIR, DISPLAY_CRS, MODEL_DIR, OUTPUT_DIR
 from src.train import explain_top_drivers
 
 BAND_COLORS = {
-    "green": "#2ecc71",
-    "yellow": "#f1c40f",
-    "orange": "#e67e22",
-    "red": "#e74c3c",
+    "green": "#8EB69B",   # Low risk: mint (from theme palette)
+    "yellow": "#F2C14E",  # Moderate: amber
+    "orange": "#F07F3C",  # High: orange
+    "red": "#E5484D",     # Very high: red
 }
+
 
 
 class ScoringEngine:

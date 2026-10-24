@@ -46,10 +46,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files directory
+# Mount static & frontend files directories
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+FRONTEND_DIR = ROOT_DIR / "frontend"
+FRONTEND_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/frontend", StaticFiles(directory=str(FRONTEND_DIR)), name="frontend")
+
 
 # SQLite Database for live sensor ingestion
 DB_PATH = OUTPUT_DIR / "sensor_logs.db"
@@ -186,11 +191,83 @@ def snap_to_nearest_node(lat: float, lon: float) -> str:
 
 @app.get("/")
 def read_root():
-    """Serve car-dashboard frontend."""
-    index_file = STATIC_DIR / "index.html"
-    if index_file.exists():
-        return FileResponse(index_file)
-    return HTMLResponse("<h2>KDF Navigation API is Running. Access <a href='/docs'>/docs</a> or <a href='/static/index.html'>/static/index.html</a></h2>")
+    """Serve car-dashboard frontend from frontend/ directory."""
+    frontend_index = FRONTEND_DIR / "index.html"
+    if frontend_index.exists():
+        return FileResponse(frontend_index)
+    static_index = STATIC_DIR / "index.html"
+    if static_index.exists():
+        return FileResponse(static_index)
+    return HTMLResponse("<h2>KDF Navigation API is Running. Access <a href='/docs'>/docs</a> or <a href='/frontend/index.html'>/frontend/index.html</a></h2>")
+
+
+@app.get("/api/gee-tiles")
+def get_gee_tiles(
+    layer: str = Query("satellite", description="satellite | viirs | elevation")
+):
+    """Generate dynamic Google Earth Engine XYZ map tile URL for project kdf-navigation."""
+    try:
+        import os
+        import ee
+        from src.gee_init import init_ee
+
+        if not hasattr(state, "gee_cache"):
+            state.gee_cache = {}
+
+        if layer in state.gee_cache:
+            return {"layer": layer, "tile_url": state.gee_cache[layer], "cached": True}
+
+        init_ee()
+
+        tile_url = None
+        if layer == "satellite":
+            # Sentinel-2 cloud-free RGB median composite over Nagpur
+            img = (
+                ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+                .filterBounds(ee.Geometry.Point([79.0882, 21.1458]))
+                .filterDate("2023-01-01", "2023-12-31")
+                .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 20))
+                .median()
+                .visualize(bands=["B4", "B3", "B2"], min=0, max=3000)
+            )
+            map_id = ee.data.getMapId({"image": img})
+            tile_url = map_id["tile_fetcher"].url_format
+        elif layer == "viirs":
+            # VIIRS Nighttime Lights 12-month median radiance composite
+            viirs = (
+                ee.ImageCollection("NOAA/VIIRS/DNB/MONTHLY_V1/VCMSLCFG")
+                .filterDate("2023-01-01", "2023-12-31")
+                .select("avg_rad")
+                .median()
+            )
+            map_id = ee.data.getMapId({
+                "image": viirs.visualize(
+                    min=1, max=60,
+                    palette=["051F20", "163832", "8EB69B", "F2C14E", "F07F3C", "E5484D"]
+                )
+            })
+            tile_url = map_id["tile_fetcher"].url_format
+        elif layer == "elevation":
+            # SRTM 30m Hillshade
+            srtm = ee.Image("USGS/SRTMGL1_003")
+            hillshade = ee.Terrain.hillshade(srtm)
+            map_id = ee.data.getMapId({"image": hillshade.visualize(min=0, max=255)})
+            tile_url = map_id["tile_fetcher"].url_format
+        else:
+            raise HTTPException(status_code=400, detail=f"Unknown layer '{layer}'. Choose from 'satellite', 'viirs', 'elevation'.")
+
+        state.gee_cache[layer] = tile_url
+        return {"layer": layer, "tile_url": tile_url, "cached": False}
+    except Exception as exc:
+        print(f"GEE tile generation notice: {exc}")
+        # High resolution fallback if GEE takes time to respond
+        fallback_url = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+        return {
+            "layer": layer,
+            "tile_url": fallback_url,
+            "fallback": True,
+            "message": str(exc),
+        }
 
 
 @app.get("/health")
