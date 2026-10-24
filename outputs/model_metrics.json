@@ -1,90 +1,89 @@
 {
-  "model": "RandomForestClassifier",
-  "data_source": "SYNTHETIC",
-  "warning": "These metrics measure agreement with simulated severity labels. They do not establish real-world accident prediction performance.",
-  "total_events": 2238,
-  "training_events": 1678,
-  "test_events": 560,
-  "accuracy": 0.4375,
-  "macro_f1": 0.33363552623434883,
-  "classification_report": {
-    "Minor": {
-      "precision": 0.6423611111111112,
-      "recall": 0.5285714285714286,
-      "f1-score": 0.5799373040752351,
-      "support": 350.0
-    },
-    "Serious": {
-      "precision": 0.3291139240506329,
-      "recall": 0.3058823529411765,
-      "f1-score": 0.3170731707317073,
-      "support": 170.0
-    },
-    "Fatal": {
-      "precision": 0.07017543859649122,
-      "recall": 0.2,
-      "f1-score": 0.1038961038961039,
-      "support": 40.0
-    },
-    "accuracy": 0.4375,
-    "macro avg": {
-      "precision": 0.34721682458607844,
-      "recall": 0.3448179271708684,
-      "f1-score": 0.33363552623434883,
-      "support": 560.0
-    },
-    "weighted avg": {
-      "precision": 0.5063978098595646,
-      "recall": 0.4375,
-      "f1-score": 0.4661363207260119,
-      "support": 560.0
-    }
-  },
-  "confusion_matrix": [
-    [
-      185,
-      97,
-      68
-    ],
-    [
-      80,
-      52,
-      38
-    ],
-    [
-      23,
-      9,
-      8
+  "baseline_logistic_regression": {
+    "model_name": "Logistic Regression",
+    "macro_f1": 0.5515,
+    "fatal_recall": 0.6062,
+    "serious_recall": 0.4007,
+    "minor_recall": 0.8032,
+    "precision_minor": 0.8458,
+    "precision_serious": 0.4685,
+    "precision_fatal": 0.297,
+    "pr_auc_serious_fatal": 0.7366,
+    "top_5pct_segment_hit_rate": 0.9128,
+    "confusion_matrix": [
+      [
+        4338,
+        851,
+        212
+      ],
+      [
+        751,
+        916,
+        619
+      ],
+      [
+        40,
+        188,
+        351
+      ]
     ]
-  ],
-  "class_order": [
-    "Minor",
-    "Serious",
-    "Fatal"
-  ],
-  "features": [
-    "year",
-    "month",
-    "hour",
-    "day_of_week",
-    "visibility_km",
-    "length_m",
-    "school",
-    "hospital",
-    "marketplace",
-    "bus_station",
-    "bus_stop",
-    "fuel",
-    "police",
-    "traffic_signals",
-    "night",
-    "weather",
-    "highway",
-    "lanes",
-    "maxspeed",
-    "oneway",
-    "near_school",
-    "near_market"
-  ],
-  "random_seed": 42
+  },
+  "calibrated_lightgbm": {
+    "model_name": "Calibrated LightGBM",
+    "macro_f1": 0.541,
+    "fatal_recall": 0.2919,
+    "serious_recall": 0.3653,
+    "minor_recall": 0.9089,
+    "precision_minor": 0.7782,
+    "precision_serious": 0.5295,
+    "precision_fatal": 0.4436,
+    "pr_auc_serious_fatal": 0.7352,
+    "top_5pct_segment_hit_rate": 0.9007,
+    "confusion_matrix": [
+      [
+        4909,
+        454,
+        38
+      ],
+      [
+        1277,
+        835,
+        174
+      ],
+      [
+        122,
+        288,
+        169
+      ]
+    ]
+  },
+  "ablated_lightgbm": {
+    "model_name": "LightGBM (Ablated: No Night Lights/Lit)",
+    "macro_f1": 0.5413,
+    "fatal_recall": 0.2712,
+    "serious_recall": 0.3902,
+    "minor_recall": 0.9009,
+    "precision_minor": 0.7814,
+    "precision_serious": 0.5278,
+    "precision_fatal": 0.4499,
+    "pr_auc_serious_fatal": 0.7282,
+    "top_5pct_segment_hit_rate": 0.8838,
+    "confusion_matrix": [
+      [
+        4866,
+        495,
+        40
+      ],
+      [
+        1242,
+        892,
+        152
+      ],
+      [
+        119,
+        303,
+        157
+      ]
+    ]
+  }
 }

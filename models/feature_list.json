@@ -1,0 +1,163 @@
+{
+  "feature_names": [
+    "length_m",
+    "lanes",
+    "maxspeed",
+    "curvature",
+    "junction_count",
+    "elevation",
+    "slope",
+    "built_up",
+    "population_density",
+    "night_lights",
+    "ntl_percentile",
+    "ntl_gradient",
+    "schools",
+    "markets",
+    "bus_stops",
+    "signals",
+    "visibility_km",
+    "vehicle_speed",
+    "dark_exposure",
+    "historical_crash_rate",
+    "highway",
+    "weather",
+    "light",
+    "surface_condition",
+    "lit_tag",
+    "school_zone",
+    "is_market_zone",
+    "is_night",
+    "hour",
+    "day_of_week",
+    "month"
+  ],
+  "numeric_features": [
+    "length_m",
+    "lanes",
+    "maxspeed",
+    "curvature",
+    "junction_count",
+    "elevation",
+    "slope",
+    "built_up",
+    "population_density",
+    "night_lights",
+    "ntl_percentile",
+    "ntl_gradient",
+    "schools",
+    "markets",
+    "bus_stops",
+    "signals",
+    "visibility_km",
+    "vehicle_speed",
+    "dark_exposure",
+    "historical_crash_rate"
+  ],
+  "categorical_features": [
+    "highway",
+    "weather",
+    "light",
+    "surface_condition",
+    "lit_tag",
+    "school_zone",
+    "is_market_zone",
+    "is_night",
+    "hour",
+    "day_of_week",
+    "month"
+  ],
+  "categories": {
+    "highway": [
+      "living_street",
+      "primary",
+      "primary_link",
+      "residential",
+      "secondary",
+      "secondary_link",
+      "tertiary",
+      "tertiary_link",
+      "trunk",
+      "trunk_link",
+      "unclassified"
+    ],
+    "weather": [
+      "clear",
+      "fog",
+      "rain",
+      "storm"
+    ],
+    "light": [
+      "dark",
+      "daylight"
+    ],
+    "surface_condition": [
+      "dry",
+      "wet"
+    ],
+    "lit_tag": [
+      "no"
+    ],
+    "school_zone": [
+      "False",
+      "True"
+    ],
+    "is_market_zone": [
+      "False",
+      "True"
+    ],
+    "is_night": [
+      "0",
+      "1"
+    ],
+    "hour": [
+      "0",
+      "1",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "2",
+      "20",
+      "21",
+      "22",
+      "23",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9"
+    ],
+    "day_of_week": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6"
+    ],
+    "month": [
+      "1",
+      "10",
+      "11",
+      "12",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9"
+    ]
+  }
+}

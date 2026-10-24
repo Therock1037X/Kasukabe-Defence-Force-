@@ -1,7 +1,19 @@
-﻿.venv/
+# Environments & dependencies
+.venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+
+# Credentials & secrets (NEVER commit credentials, tokens or keys)
 .env
 .env.*
 !.env.example
+*key*.json
+credentials
+esp32/config.h
+
+# Generated data, models, and outputs
+data/*.parquet
+data/*.geoparquet
+models/*.joblib
+outputs/

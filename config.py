@@ -14,12 +14,13 @@ RANDOM_SEED = 42
 CITY_NAME = "Nagpur, Maharashtra, India"
 FULL_CITY = False
 
-# Initial test-area focus
+# Initial test-area focus (Dharampeth + Sitabuldi + part of Wardha Road)
 TEST_AREAS = [
     "Dharampeth",
     "Sitabuldi",
     "Wardha Road",
 ]
+TEST_AREA_BBOX = (79.050, 21.085, 79.095, 21.160)  # min_lon, min_lat, max_lon, max_lat
 
 # Geospatial configuration
 DISPLAY_CRS = "EPSG:4326"

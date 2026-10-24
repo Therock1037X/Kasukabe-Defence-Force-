@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KDF Navigation — Safety-First Vehicle Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="dark-dashboard">
+
+  <!-- TOP STATUS & CONDITIONS HUD BAR -->
+  <header class="hud-header">
+    <div class="brand">
+      <div class="brand-logo">
+        <span class="logo-shield">🛡️</span>
+      </div>
+      <div class="brand-text">
+        <h1>KDF NAVIGATION</h1>
+        <span class="tagline">SAFEST ROUTE ADVISORY • NAGPUR</span>
+      </div>
+    </div>
+
+    <!-- QUICK SCENARIOS -->
+    <div class="scenarios-bar">
+      <span class="bar-label">SCENARIO:</span>
+      <button class="scenario-btn active" data-hour="12" data-weather="clear" data-month="5" id="btn-scen-noon">Clear Noon</button>
+      <button class="scenario-btn" data-hour="18" data-weather="rain" data-month="7" id="btn-scen-rain">Rainy Evening Peak</button>
+      <button class="scenario-btn" data-hour="6" data-weather="fog" data-month="12" id="btn-scen-fog">Foggy Morning</button>
+      <button class="scenario-btn" data-hour="23" data-weather="clear" data-month="3" id="btn-scen-night">Clear Night</button>
+      <button class="scenario-btn" data-hour="21" data-weather="storm" data-month="8" id="btn-scen-storm">Storm Night</button>
+    </div>
+
+    <!-- LIVE TELEMETRY STATUS -->
+    <div class="hud-right">
+      <button class="btn-toggle-live" id="btn-toggle-live" title="Toggle Live ESP32 Hardware Telemetry">
+        <span class="live-dot" id="live-dot"></span>
+        <span id="live-label">ESP32 Feed: SIM</span>
+      </button>
+      <button class="btn-night-light" id="btn-night-light" title="Toggle Earth Engine VIIRS Night Lights Layer">
+        🛰️ Night Lights
+      </button>
+    </div>
+  </header>
+
+  <!-- COLLISION / RISK PROXIMITY HUD WARNING BANNER (TOP CENTER) -->
+  <div class="proximity-alert-banner hidden" id="proximity-alert">
+    <div class="alert-icon-pulse">⚠️</div>
+    <div class="alert-content">
+      <div class="alert-title">ACCIDENT-PRONE ZONE AHEAD</div>
+      <div class="alert-subtitle" id="alert-message">Reduce speed — 220 m to high-risk road segment</div>
+    </div>
+    <div class="alert-badge" id="alert-band-badge">HIGH RISK</div>
+  </div>
+
+  <!-- MAIN MAP VIEWPORT -->
+  <main id="map" class="map-viewport"></main>
+
+  <!-- FLOATING SIDEBAR NAVIGATION PANEL -->
+  <aside class="dashboard-sidebar" id="dashboard-sidebar">
+
+    <!-- TAB SWITCHER -->
+    <div class="sidebar-tabs">
+      <button class="tab-btn active" data-tab="routing">Routing & Safety</button>
+      <button class="tab-btn" data-tab="conditions">Environment</button>
+      <button class="tab-btn" data-tab="telemetry">Live ESP32</button>
+    </div>
+
+    <!-- TAB 1: ROUTING & SAFETY -->
+    <div class="tab-content active" id="tab-routing">
+      <div class="panel-section">
+        <div class="section-header">
+          <h3>Route Planner</h3>
+          <button class="btn-reset-route" id="btn-reset-route" title="Clear selection">Clear</button>
+        </div>
+
+        <div class="route-inputs">
+          <div class="input-row">
+            <span class="pin pin-start">A</span>
+            <input type="text" id="route-start" readonly placeholder="Click map or choose preset..." value="Dharampeth (West Nagpur)" />
+          </div>
+          <div class="input-row">
+            <span class="pin pin-end">B</span>
+            <input type="text" id="route-dest" readonly placeholder="Click destination on map..." value="Wardha Road (Ajni / Khapri)" />
+          </div>
+        </div>
+
+        <div class="quick-locations">
+          <span class="loc-label">Presets:</span>
+          <button class="chip-loc" data-start="21.1440,79.0660" data-end="21.1462,79.0832">Dharampeth ➔ Sitabuldi</button>
+          <button class="chip-loc" data-start="21.1462,79.0832" data-end="21.0950,79.0750">Sitabuldi ➔ Wardha Rd</button>
+        </div>
+
+        <!-- SAFETY VS SPEED SLIDER (LAMBDA) -->
+        <div class="slider-group">
+          <div class="slider-header">
+            <span>Safety vs. Speed Trade-off (λ)</span>
+            <span class="slider-val" id="lambda-val">1.50</span>
+          </div>
+          <input type="range" min="0.0" max="4.0" step="0.25" value="1.50" id="safety-slider" />
+          <div class="slider-labels">
+            <span>Fastest (λ=0)</span>
+            <span>Balanced</span>
+            <span>Max Safety (λ=4)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ONE-LINE TRADE-OFF ADVISORY CARD -->
+      <div class="summary-card" id="route-summary-card">
+        <span class="summary-icon">💡</span>
+        <span class="summary-text" id="route-summary-text">Calculating dual-route trade-off...</span>
+      </div>
+
+      <!-- DUAL ROUTE COMPARISON CARDS -->
+      <div class="dual-routes-grid">
+        <!-- FASTEST ROUTE CARD -->
+        <div class="route-card" id="card-fastest">
+          <div class="card-head">
+            <span class="badge badge-fastest">FASTEST</span>
+            <span class="card-time" id="fastest-time">-- min</span>
+          </div>
+          <div class="card-metrics">
+            <div class="metric"><span class="m-lbl">Distance:</span> <span class="m-val" id="fastest-dist">-- km</span></div>
+            <div class="metric"><span class="m-lbl">Risk Score:</span> <span class="m-val" id="fastest-risk">--</span></div>
+            <div class="metric"><span class="m-lbl">Red/Orange:</span> <span class="m-val text-red" id="fastest-danger">--%</span></div>
+          </div>
+          <div class="worst-segment-box">
+            <span class="ws-label">Worst Segment:</span>
+            <span class="ws-val" id="fastest-worst">--</span>
+          </div>
+          <button class="btn-select-route" id="btn-choose-fastest">Select Fastest</button>
+        </div>
+
+        <!-- SAFEST ROUTE CARD (RECOMMENDED) -->
+        <div class="route-card active-safest" id="card-safest">
+          <div class="card-head">
+            <span class="badge badge-safest">SAFEST</span>
+            <span class="card-time" id="safest-time">-- min</span>
+          </div>
+          <div class="card-metrics">
+            <div class="metric"><span class="m-lbl">Distance:</span> <span class="m-val" id="safest-dist">-- km</span></div>
+            <div class="metric"><span class="m-lbl">Risk Score:</span> <span class="m-val text-green" id="safest-risk">--</span></div>
+            <div class="metric"><span class="m-lbl">Red/Orange:</span> <span class="m-val text-green" id="safest-danger">--%</span></div>
+          </div>
+          <div class="worst-segment-box">
+            <span class="ws-label">Worst Segment:</span>
+            <span class="ws-val" id="safest-worst">--</span>
+          </div>
+          <button class="btn-select-route btn-safest" id="btn-choose-safest">Select Safest (Recommended)</button>
+        </div>
+      </div>
+
+      <!-- SIMULATION CONTROLS -->
+      <div class="simulation-section">
+        <button class="btn-sim-drive" id="btn-sim-drive">
+          ▶ Start Drive Simulation
+        </button>
+        <div class="sim-speedo hidden" id="sim-speedo">
+          <div class="speedo-item"><span class="sp-lbl">SPEED</span><span class="sp-val" id="sim-speed-val">45 km/h</span></div>
+          <div class="speedo-item"><span class="sp-lbl">DISTANCE</span><span class="sp-val" id="sim-dist-val">0.0 km</span></div>
+          <div class="speedo-item"><span class="sp-lbl">AUDIO</span><span class="sp-val text-green" id="audio-status">CHIME ON 🔊</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: ENVIRONMENT & MODEL CONDITIONS -->
+    <div class="tab-content" id="tab-conditions">
+      <div class="panel-section">
+        <h3>Environmental Settings</h3>
+
+        <div class="ctrl-row">
+          <label for="hour-picker">Time of Day (Hour: <span id="hour-disp">18:00</span>)</label>
+          <input type="range" id="hour-picker" min="0" max="23" value="18" />
+        </div>
+
+        <div class="ctrl-row">
+          <label for="weather-select">Atmospheric Weather</label>
+          <select id="weather-select">
+            <option value="clear" selected>Clear Sky</option>
+            <option value="rain">Monsoon Rain (Wet Road)</option>
+            <option value="fog">Winter Morning Fog (Low Visibility)</option>
+            <option value="storm">Severe Thunderstorm</option>
+          </select>
+        </div>
+
+        <div class="ctrl-row">
+          <label for="month-select">Calendar Month</label>
+          <select id="month-select">
+            <option value="1">January (Winter)</option>
+            <option value="5">May (Summer Peak)</option>
+            <option value="7">July (Monsoon Peak)</option>
+            <option value="10" selected>October (Post-Monsoon)</option>
+            <option value="12">December (Winter Fog)</option>
+          </select>
+        </div>
+
+        <button class="btn-apply-conditions" id="btn-apply-conditions">Recalculate Network Risk</button>
+      </div>
+
+      <div class="panel-section">
+        <h3>Risk Legend</h3>
+        <div class="legend-list">
+          <div class="legend-item"><span class="leg-color leg-green"></span> <span>Low Risk (0–50th percentile)</span></div>
+          <div class="legend-item"><span class="leg-color leg-yellow"></span> <span>Moderate Risk (50–80th percentile)</span></div>
+          <div class="legend-item"><span class="leg-color leg-orange"></span> <span>Elevated Risk (80–95th percentile)</span></div>
+          <div class="legend-item"><span class="leg-color leg-red"></span> <span>High Hazard Zone (95–100th percentile)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: LIVE ESP32 HARDWARE -->
+    <div class="tab-content" id="tab-telemetry">
+      <div class="panel-section">
+        <h3>ESP32 IoT Telemetry</h3>
+        <p class="muted">Live telemetry received via <code>POST /ingest</code>.</p>
+
+        <div class="telemetry-table">
+          <div class="tel-row"><span class="t-key">Vehicle GPS:</span> <span class="t-val" id="tel-gps">21.1458, 79.0882</span></div>
+          <div class="tel-row"><span class="t-key">Speed:</span> <span class="t-val" id="tel-spd">42.5 km/h</span></div>
+          <div class="tel-row"><span class="t-key">Rain Sensor:</span> <span class="t-val" id="tel-rain">120 (Clear)</span></div>
+          <div class="tel-row"><span class="t-key">LDR Ambient:</span> <span class="t-val" id="tel-ldr">840 (Daylight)</span></div>
+          <div class="tel-row"><span class="t-key">MPU6050 Brake:</span> <span class="t-val" id="tel-brake">Normal (0.12g)</span></div>
+          <div class="tel-row"><span class="t-key">Snapped Segment:</span> <span class="t-val" id="tel-segment">#17778 (Trunk)</span></div>
+        </div>
+
+        <button class="btn-send-test-reading" id="btn-send-test-reading">Inject Sample ESP32 Telemetry</button>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- SEGMENT INSPECTION POPUP MODAL -->
+  <div class="segment-modal hidden" id="segment-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h4 id="seg-title">Primary Road #17778</h4>
+        <button class="btn-close-modal" id="btn-close-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-badge-row">
+          <span class="seg-risk-badge" id="seg-badge">HIGH RISK (Red)</span>
+          <span class="seg-risk-index" id="seg-risk-index">Risk Index: 0.842</span>
+        </div>
+
+        <div class="prob-bars">
+          <div class="pb-row"><span>Minor Crash P(Minor):</span> <strong id="prob-minor">52%</strong></div>
+          <div class="pb-row"><span>Serious Injury P(Serious):</span> <strong id="prob-serious">32%</strong></div>
+          <div class="pb-row"><span>Fatal Crash P(Fatal):</span> <strong id="prob-fatal" class="text-red">16%</strong></div>
+        </div>
+
+        <div class="drivers-box">
+          <span class="drv-title">Top Risk Drivers (Plain Language):</span>
+          <ul id="seg-drivers-list">
+            <li>Low street light & dark exposure</li>
+            <li>High vehicle speeds (65 km/h)</li>
+            <li>Multi-way junction intersection</li>
+          </ul>
+        </div>
+
+        <div class="seg-meta-grid">
+          <div>Length: <span id="sm-length">150 m</span></div>
+          <div>Lanes: <span id="sm-lanes">4</span></div>
+          <div>Speed Limit: <span id="sm-speed">65 km/h</span></div>
+          <div>Elevation: <span id="sm-elevation">309 m</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PERSISTENT FOOTER DISCLAIMER -->
+  <footer class="app-footer">
+    <span>Synthetic data. Prototype only.</span>
+    <span>KDF Navigation • Built for Nagpur, Maharashtra</span>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
